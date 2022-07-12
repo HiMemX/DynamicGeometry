@@ -5,8 +5,13 @@ DynamicGeometry is an editor written in Python using the Ursina wrapper, capable
 
 
 Settings:
+
 Rotate -> If the model viewer automatically spins around the object
+
 Wireframe -> If the models wireframe is shown (Helpful with transparency bugs)
+
 Texture Interpolation -> If the textures get smoothened out by Ursina
+
+
 
 Adjust Imported Colors -> If the imported models textures get adjusted to be less bright
