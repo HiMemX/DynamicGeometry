@@ -1,0 +1,105 @@
+{
+ "version": "auto-py-to-exe-configuration_v1",
+ "pyinstallerOptions": [
+  {
+   "optionDest": "noconfirm",
+   "value": true
+  },
+  {
+   "optionDest": "filenames",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/main.py"
+  },
+  {
+   "optionDest": "onefile",
+   "value": false
+  },
+  {
+   "optionDest": "console",
+   "value": false
+  },
+  {
+   "optionDest": "icon_file",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/icon.ico"
+  },
+  {
+   "optionDest": "ascii",
+   "value": false
+  },
+  {
+   "optionDest": "clean_build",
+   "value": false
+  },
+  {
+   "optionDest": "strip",
+   "value": false
+  },
+  {
+   "optionDest": "noupx",
+   "value": false
+  },
+  {
+   "optionDest": "uac_admin",
+   "value": false
+  },
+  {
+   "optionDest": "uac_uiaccess",
+   "value": false
+  },
+  {
+   "optionDest": "win_private_assemblies",
+   "value": false
+  },
+  {
+   "optionDest": "win_no_prefer_redirects",
+   "value": false
+  },
+  {
+   "optionDest": "bootloader_ignore_signals",
+   "value": false
+  },
+  {
+   "optionDest": "disable_windowed_traceback",
+   "value": false
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/Helpers;Helpers/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/HkLib;HkLib/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/ModelCompile;ModelCompile/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/ModelDecompile;ModelDecompile/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/ModelViewer.py;."
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/AppData/Roaming/Python/Python39/site-packages/panda3d_tools;panda3d_tools/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/AppData/Roaming/Python/Python39/site-packages/panda3d;panda3d/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/AppData/Roaming/Python/Python39/site-packages/panda3d-1.10.10.dist-info;panda3d-1.10.10.dist-info/"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/felix/Desktop/Projects/DynamicGeometry/icon.ico;."
+  }
+ ],
+ "nonPyinstallerOptions": {
+  "increaseRecursionLimit": true,
+  "manualArguments": ""
+ }
+}
