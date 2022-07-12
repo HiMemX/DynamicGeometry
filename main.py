@@ -24,7 +24,9 @@ class MainApplication(tk.Frame):
         self.parent.title("DynamicGeometry")
         self.parent.geometry("500x520")
         self.parent.resizable(False, False) 
-        self.parent.iconbitmap("icon.ico")
+        try: self.parent.iconbitmap("icon.ico")
+        except: pass
+        
 
         self.parent.bind('<KeyPress>', self.keypress)
         self.parent.bind('<KeyRelease>', self.unpress)
