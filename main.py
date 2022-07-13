@@ -23,11 +23,10 @@ class MainApplication(tk.Frame):
         self.parent = parent
         self.parent.title("DynamicGeometry")
         self.parent.geometry("500x520")
-        self.parent.resizable(False, False) 
+        self.parent.resizable(False, False)
         try: self.parent.iconbitmap("icon.ico")
         except: pass
         
-
         self.parent.bind('<KeyPress>', self.keypress)
         self.parent.bind('<KeyRelease>', self.unpress)
         self.pressed = False
@@ -44,7 +43,7 @@ class MainApplication(tk.Frame):
         self.rotatevar = tk.IntVar(value=1)
         self.wireframevar = tk.IntVar(value=0)
         self.interpolvar = tk.IntVar(value=1)
-        self.importintervar = tk.IntVar(value=1)
+        self.importintervar = tk.IntVar(value=0)
         self.settingsmenu.add_checkbutton(label="Rotate", command=self.togglerotate, variable=self.rotatevar, onvalue=1, offvalue=0)
         self.settingsmenu.add_checkbutton(label="Wireframe", variable=self.wireframevar, onvalue=1, offvalue=0)
         self.settingsmenu.add_checkbutton(label="Texture Interpolation", command=self.toggleinterpolation, variable=self.interpolvar, onvalue=1, offvalue=0)
@@ -174,36 +173,40 @@ class MainApplication(tk.Frame):
         uvfactor        = self.geometries[index][4]
 
         vertexid        = Decompiler.getvertexid(data)
+        normalid        = Decompiler.getnormalid(data)
         uvid            = Decompiler.getuvid(data)
         faceid          = Decompiler.getfaceid(data)
 
         vertexasset = self.getasset(vertexid)
+        normalasset = self.getasset(normalid)
         uvasset     = self.getasset(uvid)
         faceasset   = self.getasset(faceid)
 
         vertices = Decompiler.rawblobtoverts(vertexasset.data)
+        normals  = Decompiler.rawblobtonormals(normalasset.data)
         uvs      = Decompiler.rawblobtouvs(uvasset.data, uvfactor)
         faces    = Decompiler.rawblobtofaces(faceasset.data, animamount, referenceamount)
 
         name = self.geometries[index][0].name + f" [{hex(int.from_bytes(self.geometries[index][0].assetid, 'big'))}]"
 
         Png.savepng(directory, texture, f"{name}")
-        Wavefront.saveobj(open(directory+"/"+f"{name}.obj", "w+"), name, vertices, uvs, faces)
+        Wavefront.saveobj(open(directory+"/"+f"{name}.obj", "w+"), name, vertices, normals, uvs, faces)
         Mtl.savemtl(open(directory+"/"+f"{name}.mtl", "w+"), name)
 
     def replace(self):
         if self.archive == None: return
         if self.geometries[self.selection][3] == False: return
 
-        directory = filedialog.askopenfilename()
+        directory = filedialog.askopenfilename(filetypes=(("Wavefront", "*.obj"),))
 
         if directory=="":
             return
 
         basedirectory = "/".join(directory.split("/")[:-1])
 
-        vertices, uvs, faces, mtllib, usemtl = Wavefront.readobj(open(directory, "r"))
+        vertices, uvs, normals, faces, mtllib, usemtl = Wavefront.readobj(open(directory, "r"))
         materials = Mtl.readmtl(open(basedirectory+"/"+mtllib, "r"))
+        
         if materials[usemtl][1] == ":":
             texture = Png.readpng(materials[usemtl])
         else:
@@ -212,10 +215,10 @@ class MainApplication(tk.Frame):
         texture = Png.clamp(texture)
 
         # Update Ursina Model
-        modelvertices, modeluvs, modelfaces, modeltexture = UrsinaMesher.mesh(vertices, uvs, faces, texture)
+        modelvertices, modelnormals, modeluvs, modelfaces, modeltexture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
         linefaces = [tri+[tri[0]] for tri in modelfaces]
 
-        self.geometries[self.selection][1].model = ModelViewer.urs.Mesh(vertices=modelvertices, uvs=modeluvs, triangles=modelfaces)
+        self.geometries[self.selection][1].model = ModelViewer.urs.Mesh(vertices=modelvertices, normals=modelnormals, uvs=modeluvs, triangles=modelfaces)
         self.geometries[self.selection][1].texture = ModelViewer.urs.Texture(modeltexture)
         self.geometries[self.selection][1].texture.apply()
         self.geometries[self.selection][2].model = ModelViewer.urs.Mesh(vertices=modelvertices, triangles=linefaces, mode="line")
@@ -223,6 +226,7 @@ class MainApplication(tk.Frame):
         # Update Archive Model
         data = self.geometries[self.selection][0].data
         vertexid        = Decompiler.getvertexid(data)
+        normalid        = Decompiler.getnormalid(data)
         uvid            = Decompiler.getuvid(data)
         faceid          = Decompiler.getfaceid(data)
         textureid       = self.geometries[self.selection][5]
@@ -230,20 +234,17 @@ class MainApplication(tk.Frame):
         referenceamount = Decompiler.getreferenceamount(data)
         uvfactor        = self.geometries[self.selection][4]
 
-        vertexcoords    = self.getassetcoordinate(vertexid)
-        uvcoords        = self.getassetcoordinate(uvid)
-        facecoords      = self.getassetcoordinate(faceid)
-        texturecoords   = self.getassetcoordinate(textureid)
-
         vertexdata      = Compiler.vertextorawblob(vertices)
+        normaldata      = Compiler.normaltorawblob(normals)
         uvdata          = Compiler.uvtorawblob(uvs, uvfactor)
         facedata        = Compiler.facestorawblob(faces, animamount, referenceamount)
         texturedata     = Compiler.texturetorawblob(texture, self.importintervar.get())
 
-        self.setcoordinatesdata(vertexcoords, vertexdata)
-        self.setcoordinatesdata(uvcoords, uvdata)
-        self.setcoordinatesdata(facecoords, facedata)
-        self.setcoordinatesdata(texturecoords, texturedata)
+        self.setassetdata(vertexid, vertexdata)
+        self.setassetdata(normalid, normaldata)
+        self.setassetdata(uvid, uvdata)
+        self.setassetdata(faceid, facedata)
+        self.setassetdata(textureid, texturedata)
 
         self.updateselection(self.selection, self.selection)
 
@@ -301,6 +302,14 @@ class MainApplication(tk.Frame):
         self.updateselection(self.selection, int(widget.curselection()[0]))
 
         self.selection = int(widget.curselection()[0])
+    
+    def setassetdata(self, assetid, data):
+        for li, layer in enumerate(self.archive.mast.sections[0].layers):
+            if layer.sublayer_magic == "PSLD": continue
+            for ti, table in enumerate(layer.sublayer.tables):
+                for ai, asset in enumerate(table.assets):
+                    if asset.assetid == assetid:
+                        asset.data = data
 
     def getassetcoordinate(self, assetid):
         for li, layer in enumerate(self.archive.mast.sections[0].layers):
@@ -333,6 +342,7 @@ class MainApplication(tk.Frame):
                             continue
 
                         vertexid        = Decompiler.getvertexid(data)
+                        normalid        = Decompiler.getnormalid(data)
                         uvid            = Decompiler.getuvid(data)
                         faceid          = Decompiler.getfaceid(data)
                         animamount      = Decompiler.getanimamount(data)
@@ -356,17 +366,20 @@ class MainApplication(tk.Frame):
                         uvfactor        = Decompiler.getuvfactor(genshaderasset.data)
 
                         vertexasset = self.getasset(vertexid)
+                        normalasset = self.getasset(normalid)
                         uvasset     = self.getasset(uvid)
                         faceasset   = self.getasset(faceid)
                         textureasset= self.getasset(textureid)
 
                         vertices = Decompiler.rawblobtoverts(vertexasset.data)
+                        normals  = Decompiler.rawblobtonormals(normalasset.data)
                         uvs      = Decompiler.rawblobtouvs(uvasset.data, uvfactor)
                         faces    = Decompiler.rawblobtofaces(faceasset.data, animamount, referenceamount)
                         texture  = Decompiler.rawblobtotexture(textureasset.data)
 
+                        # Implement Normals here
                         try: # Try and except cause I can't anymore
-                            vertices, uvs, faces, texture = UrsinaMesher.mesh(vertices, uvs, faces, texture)
+                            vertices, normals, uvs, faces, texture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
                             linefaces = [tri+[tri[0]] for tri in faces]
 
                         except:
@@ -374,7 +387,7 @@ class MainApplication(tk.Frame):
                             continue
 
                         self.geometries.append([asset,
-                            ModelViewer.urs.Entity(model=ModelViewer.urs.Mesh(vertices=vertices, uvs=uvs, triangles=faces), texture=ModelViewer.urs.Texture(texture), double_sided = True, visible=False),
+                            ModelViewer.urs.Entity(model=ModelViewer.urs.Mesh(vertices=vertices, normals=normals, uvs=uvs, triangles=faces), texture=ModelViewer.urs.Texture(texture), double_sided = True, visible=False),
                             ModelViewer.urs.Entity(model=ModelViewer.urs.Mesh(vertices=vertices, triangles=linefaces, mode="line"), visible=False),
                             True,
                             uvfactor,

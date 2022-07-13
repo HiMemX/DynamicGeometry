@@ -30,7 +30,7 @@ def init():
     urs.window.fps_counter.enabled = False
     urs.window.icon = "icon.ico"
 
-    skybox = urs.Sky(color=urs.color.color(0, 0, 0.2))
+    urs.window.color = urs.Color(0.1, 0.1, 0.1, 1)
 
     x = 2
 
