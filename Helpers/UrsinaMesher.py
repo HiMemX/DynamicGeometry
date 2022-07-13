@@ -2,14 +2,16 @@ from PIL import Image
 from PIL import ImageTk
 import numpy as np
 
-def mesh(verts, uvs, faces, texture):
+def mesh(verts, normals, uvs, faces, texture):
     newverts = []
     newuvs = []
+    newnormals = []
 
     for tri in faces:
         for index in tri:
             newverts.append(verts[index[0]])
             newuvs.append(uvs[index[1]])
+            newnormals.append(normals[index[2]])
 
     newtexture = Image.fromarray(np.array([np.array([[x[0], x[1], x[2], 255] for x in i], np.uint8) for i in texture[0]], np.uint8), "RGBA")
     
@@ -19,4 +21,4 @@ def mesh(verts, uvs, faces, texture):
 
         newtexture.putalpha(rgbaimage)
 
-    return newverts, newuvs, [[i, i+1, i+2] for i in range(0, len(newverts), 3)], newtexture
+    return newverts, newnormals, newuvs, [[i, i+1, i+2] for i in range(0, len(newverts), 3)], newtexture

@@ -20,7 +20,7 @@ def tofaces(data, animamount, referenceamount):
                         index.append(int.from_bytes(data[offset:offset+0x02], "big"))
                         offset += 0x02
 
-                    face.append([index[0], index[-1]]) # UVS TEMPORARILY DISABLED
+                    face.append([index[0], index[-1], index[1]]) # UVS TEMPORARILY DISABLED
                         
                 faces.append(face)
 
@@ -36,7 +36,7 @@ def tofaces(data, animamount, referenceamount):
                     index.append(int.from_bytes(data[offset:offset+0x02], "big"))
                     offset += 0x02
 
-                face.append([index[0], index[-1]]) # UVS TEMPORARILY DISABLED
+                face.append([index[0], index[-1], index[1]]) # UVS TEMPORARILY DISABLED
             
             faces.append(face)
             #for i in range(len(face)-2):
@@ -47,10 +47,10 @@ def tofaces(data, animamount, referenceamount):
     for i in faces:
         for x in range(len(i)-2):
             if (x+1) % 2 == 0:
-                indices.append([(i[x][0], i[x][-1]), (i[x+2][0], i[x+2][-1]), (i[x+1][0], i[x+1][-1])])
+                indices.append([(i[x][0], i[x][1], i[x][2]), (i[x+2][0], i[x+2][1], i[x+2][2]), (i[x+1][0], i[x+1][1], i[x+1][2])])
                 continue
             
-            indices.append([(i[x][0], i[x][-1]), (i[x+1][0], i[x+1][-1]), (i[x+2][0], i[x+2][-1])])
+            indices.append([(i[x][0], i[x][1], i[x][2]), (i[x+1][0], i[x+1][1], i[x+1][2]), (i[x+2][0], i[x+2][1], i[x+2][2])])
 
     return indices
                         

@@ -2,6 +2,7 @@ import ModelDecompile.Assets.RawBlobs.VertexRawBlob as Vertex
 import ModelDecompile.Assets.RawBlobs.UVRawBlob as UV
 import ModelDecompile.Assets.RawBlobs.FaceRawBlob as Face
 import ModelDecompile.Assets.RawBlobs.TextureRawBlob as Texture
+import ModelDecompile.Assets.RawBlobs.NormalRawBlob as Normal
 
 import ModelDecompile.Assets.StaticGeometry as StaticGeometry
 import ModelDecompile.Assets.Material as Material
@@ -49,6 +50,9 @@ def getuvid(data):
 def getfaceid(data):
     return StaticGeometry.getids(data)[-1]
 
+def getnormalid(data):
+    return StaticGeometry.getids(data)[2]
+
 
 def rawblobtoverts(data):
     return Vertex.toverts(data)
@@ -61,6 +65,9 @@ def rawblobtofaces(data, animamount, referenceamount):
 
 def rawblobtotexture(data):
     return Texture.totexture(data)
+
+def rawblobtonormals(data):
+    return Normal.tonormals(data)
 
 
 def checkskin(data):

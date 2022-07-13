@@ -3,9 +3,9 @@ import math
 def rgb565(color):
     return (color >> 11 << 3 & 0xff, color >> 5 << 2 & 0xff, color >> 0 << 3 & 0xff)
 
-def rgb888_to_rgb565(color):
+def rgb888_to_rgb565(color, interpolate):
     if interpolate == 1:
-        return ((int((color[0]**2)/256) >> 3 << 11) + (int((color[1]**2)/256) >> 2 << 5) + (int((color[2]**2)/256) >> 3)).to_bytes(2, byteorder="big")
+        return ((int((color[0]**2/300)) >> 3 << 11) + (int((color[1]**2/300)) >> 2 << 5) + (int((color[2]**2/300)) >> 3)).to_bytes(2, byteorder="big")
     return ((color[0] >> 3 << 11) + (color[1] >> 2 << 5) + (color[2] >> 3)).to_bytes(2, byteorder="big")
 
 
@@ -18,12 +18,12 @@ def vmul(vector1, factor):
 def vadd(vector1, vector2):
     return (vector1[0] + vector2[0], vector1[1] + vector2[1], vector1[2] + vector2[2])
 
-def tpl_compress(images):
+def tpl_compress(images, interpolate):
     
     for image_o in images:
         bytecode = b""
         image = [image_o[-1-row] for row in range(len(image_o))]
-        while len(image) > 4:
+        while len(image) > 4 and len(image[0]) > 4:
             sizey = len(image)
             sizex = len(image[0])
             for ycblock in range(int(sizey/8)):
@@ -39,20 +39,27 @@ def tpl_compress(images):
                             for y in range(4):
                                 for x in range(4):
                                     curr_pixel = image[(ycblock*8 + yblock*4 + y)][xcblock*8 + xblock*4 + x]
-                                    diff = vdiff(curr_pixel, (255, 255, 255))
                                     
-                                    if diff < high_diff:
-                                        high_diff = diff
+                                    if sum(curr_pixel) < sum(low):
+                                        low = curr_pixel
+                                    
+                                    if sum(curr_pixel) > sum(high):
                                         high = curr_pixel
                                     
-                                    diff = vdiff(curr_pixel, (0, 0, 0))
+                                    # diff = vdiff(curr_pixel, (255, 255, 255))
                                     
-                                    if diff < low_diff:
-                                        low_diff = diff
-                                        low = curr_pixel
+                                    #if diff < high_diff:
+                                    #    high_diff = diff
+                                    #    high = curr_pixel
+                                    #
+                                    #diff = vdiff(curr_pixel, (0, 0, 0))
+                                    #
+                                    #if diff < low_diff:
+                                    #    low_diff = diff
+                                    #    low = curr_pixel
                             
                             
-                            if rgb888_to_rgb565(low) < rgb888_to_rgb565(high):
+                            if rgb888_to_rgb565(low, 0) < rgb888_to_rgb565(high, 0):
                                 palette = [high, low, vadd(vmul(high, 2/3), vmul(low, 1/3)), vadd(vmul(high, 1/3), vmul(low, 2/3))]
                             
                             else:
@@ -60,7 +67,7 @@ def tpl_compress(images):
                             
                             
                             for i in range(2):
-                                bytecode += rgb888_to_rgb565(palette[i])
+                                bytecode += rgb888_to_rgb565(palette[i], interpolate)
                             
                             indices = ""
                             
@@ -91,13 +98,12 @@ def downscale(image):
         for x, pixel in enumerate(row):
             newimage[math.floor(y/2)][math.floor(x/2)] = vadd(newimage[math.floor(y/2)][math.floor(x/2)], vmul(pixel, 0.25))
     return newimage
-interpolate = 1
+
 def torawblob(texture, inter):
-    global interpolate
     interpolate = inter
     bytecode = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00x\xc8t\x06\xee\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 \xaf0\x00\x00\x00\x01\x00\x00\x00\x0c\x00\x00\x00\x14\x00\x00\x00\x00'
-    bytecode += len(texture[0][0]).to_bytes(2, byteorder="big")
     bytecode += len(texture[0]).to_bytes(2, byteorder="big")
+    bytecode += len(texture[0][0]).to_bytes(2, byteorder="big")
     bytecode += b'\x00\x00\x00\x0e\x00\x00\x00@\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00\x00\x01\x80\x00\x00\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-    bytecode += tpl_compress(texture)
+    bytecode += tpl_compress(texture, interpolate)
     return bytecode

@@ -11,7 +11,7 @@ def emptyimage(x, y):
 def readpng(path):
     im = Image.open(path)
     pixels = list(im.getdata())
-    pixels = [[int(value/1.05) for value in element] for element in pixels]
+    pixels = [[int(value/1.05) for value in element[:3]] for element in pixels]
     width, height = im.size
     return [[pixels[i * width:(i + 1) * width] for i in range(height)]]
 
