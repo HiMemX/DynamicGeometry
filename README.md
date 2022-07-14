@@ -17,4 +17,4 @@ Texture Interpolation -> If the textures get smoothened out by Ursina
 Adjust Imported Colors -> If the imported models textures get adjusted to be less bright
 
 Note:
-Imported textures sizes get clamped down to the nearest power of 2 (16, 32, 64, 128, 256...). This will mess up UVs, so make sure to properly format your textures.
+Imported textures sizes get clamped down to the nearest power of 2 (16, 32, 64, 128, 256...). This can mess up UVs, so make sure to properly format your textures.
