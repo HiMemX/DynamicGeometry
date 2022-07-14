@@ -15,6 +15,10 @@ import Helpers.UrsinaMesher as UrsinaMesher
 import Helpers.Wavefront as Wavefront
 import Helpers.Mtl as Mtl
 import Helpers.Png as Png
+import Helpers.Triangulate as Triangulate
+import Helpers.ImageTools as ImageTools
+import Helpers.Atlas as Atlas
+import Helpers.MeshTools as MeshTools
 
 
 class MainApplication(tk.Frame):
@@ -204,15 +208,41 @@ class MainApplication(tk.Frame):
 
         basedirectory = "/".join(directory.split("/")[:-1])
 
-        vertices, uvs, normals, faces, mtllib, usemtl = Wavefront.readobj(open(directory, "r"))
+        vertices, uvs, normals, faces, mtllib, usemtl, valid = Wavefront.readobj(open(directory, "r"))
         materials = Mtl.readmtl(open(basedirectory+"/"+mtllib, "r"))
-        
-        if materials[usemtl][1] == ":":
-            texture = Png.readpng(materials[usemtl])
-        else:
-            texture = Png.readpng(basedirectory+"/"+materials[usemtl])
 
-        texture = Png.clamp(texture)
+        # Checks
+        if not valid:
+            tk.messagebox.showwarning("Warning", "Detected Out-Of-Bounds UVs!")
+
+        if len(vertices) > 65536:
+            tk.messagebox.showerror("Error", "Too many vertices!\nMaximum supported amount is 65536.")
+            return
+        
+        if len(uvs) > 65536:
+            tk.messagebox.showerror("Error", "Too many uvs!\nMaximum supported amount is 65536.")
+            return
+        
+        if len(normals) > 65536:
+            tk.messagebox.showerror("Error", "Too many normals!\nMaximum supported amount is 65536.")
+            return
+
+        faces = Triangulate.triangulate(faces)
+        
+        # If texture path is absolute or not, then read it accordingly
+        textures = [Png.clamp(Png.readpng(materials[mtl])) if materials[mtl][1] == ":" else Png.clamp(Png.readpng(basedirectory+"/"+materials[mtl])) for mtl in usemtl]
+        #if materials[usemtl][1] == ":":
+        #    texture = Png.readpng(materials[usemtl])
+        #else:
+        #    texture = Png.readpng(basedirectory+"/"+materials[usemtl])
+
+        #texture = Png.clamp(texture)
+        atlassize = Atlas.getatlassize(len(textures))
+        biggestsizex, biggestsizey = ImageTools.getbiggestsize(textures)
+        textures = [ImageTools.resize(texture, biggestsizex, biggestsizey) for texture in textures]
+        uvs = Atlas.fixuvs(uvs, atlassize)
+        uvs = MeshTools.clampuvs(uvs)
+        texture = [Atlas.stitch(textures, atlassize)]
 
         # Update Ursina Model
         modelvertices, modelnormals, modeluvs, modelfaces, modeltexture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
@@ -382,7 +412,9 @@ class MainApplication(tk.Frame):
                             vertices, normals, uvs, faces, texture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
                             linefaces = [tri+[tri[0]] for tri in faces]
 
-                        except:
+                        except Exception as E:
+                            #print(E)
+                            #exit()
                             self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
                             continue
 

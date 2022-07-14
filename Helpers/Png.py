@@ -35,4 +35,4 @@ def clamp(texture): # Clamps to a 2**x
     y = len(texture[0])
     xnew = get2power(x)
     ynew = get2power(y)
-    return [[[[texture[0][row][pixel][color] for color in range(3)] for pixel in range(xnew)] for row in range(ynew)]]
+    return [[[texture[0][row][pixel][color] for color in range(3)] for pixel in range(xnew)] for row in range(ynew)]

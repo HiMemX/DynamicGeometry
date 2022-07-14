@@ -1,14 +1,24 @@
-
-from sys import byteorder
-
-
 def torawblob(faces, animamount, referenceamount):
+    data = b""
+
     mode = b"\x90"
-    amount = len(faces)*3
+    chunk = 0
+    chunksize = 0x1000
+    for fi, face in enumerate(faces):
+        if chunk == 0:
 
-    data = mode + amount.to_bytes(2, byteorder="big")
+            amount = (len(faces)-fi)*3
+            if len(face)-fi > chunksize:
+                amount = chunksize*3
 
-    for face in faces:
+            data += mode + amount.to_bytes(2, byteorder="big")
+    
+
+        if chunk >= chunksize:
+            chunk = 0
+        
+        chunk += 1
+
         for index in face[:3]:
             data += bytes(animamount)
             data += index[0].to_bytes(2, byteorder="big")
