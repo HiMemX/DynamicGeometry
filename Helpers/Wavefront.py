@@ -57,4 +57,5 @@ def saveobj(file, name, verts, normals, uvs, faces):
     file.write("usemtl shader\n") 
     
     for fi, face in enumerate(faces):
+        #file.write(f"f {face[0][0]+1} {face[1][0]+1} {face[2][0]+1}\n")
         file.write(f"f {face[0][0]+1}/{face[0][1]+1}/{face[0][2]+1} {face[1][0]+1}/{face[1][1]+1}/{face[1][2]+1} {face[2][0]+1}/{face[2][1]+1}/{face[2][2]+1}\n")

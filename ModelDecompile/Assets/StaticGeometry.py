@@ -13,6 +13,11 @@ def getids(data):
     
     return ids
 
+def gettextureids(data):
+    offset = int.from_bytes(data[0x48:0x4C], "big")+0x10
+    return data[offset:offset+0x08]
+
+
 def checkskin(data):
     idoffset = int.from_bytes(data[0x44:0x48], "big")+0x08
     

@@ -14,7 +14,6 @@ def mesh(verts, normals, uvs, faces, texture):
             #print("UV APPENDED")
             newnormals.append(normals[index[2]])
             #print("NORMAL APPENDED")
-
     #print("Geometry Generated")
 
     newtexture = Image.fromarray(np.array([np.array([[x[0], x[1], x[2], 255] for x in i], np.uint8) for i in texture[0]], np.uint8), "RGBA")

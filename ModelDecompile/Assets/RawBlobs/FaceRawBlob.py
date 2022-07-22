@@ -1,5 +1,5 @@
 
-def tofaces(data, animamount, referenceamount):
+def tofaces(data, animamount, referenceamount, pfst):
     offset = 0
     faces = []
 
@@ -46,7 +46,7 @@ def tofaces(data, animamount, referenceamount):
     indices = []
     for i in faces:
         for x in range(len(i)-2):
-            if (x+1) % 2 == 0:
+            if (x+1) % 2 == pfst:
                 indices.append([(i[x][0], i[x][1], i[x][2]), (i[x+2][0], i[x+2][1], i[x+2][2]), (i[x+1][0], i[x+1][1], i[x+1][2])])
                 continue
             

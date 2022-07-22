@@ -1,4 +1,4 @@
-def torawblob(faces, animamount, referenceamount):
+def torawblob(faces, animamount, referenceamount, pfst):
     data = b""
 
     mode = b"\x90"
@@ -19,7 +19,8 @@ def torawblob(faces, animamount, referenceamount):
         
         chunk += 1
 
-        for index in face[:3]:
+        tempface = [face[0], face[1+pfst], face[2-pfst]]
+        for index in tempface:
             data += bytes(animamount)
             data += index[0].to_bytes(2, byteorder="big")
             data += index[2].to_bytes(2, byteorder="big")

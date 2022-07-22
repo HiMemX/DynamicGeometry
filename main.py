@@ -166,14 +166,19 @@ class MainApplication(tk.Frame):
         tk.messagebox.showinfo("Success", f"Successfully extracted {self.geometries[self.selection][0].name}!")
 
     def extractmodel(self, index, directory):
+        if self.geometries[index][3] == False: return
 
         data = self.geometries[index][0].data
+
+        pfst = False
+        if Decompiler.checkskin(data):
+            pfst = True
 
         textureasset = self.getasset(self.geometries[index][5])
         texture      = Decompiler.rawblobtotexture(textureasset.data)
     
         animamount      = Decompiler.getanimamount(data)
-        referenceamount = Decompiler.getreferenceamount(data)
+        referenceamount = Decompiler.getreferenceamount(data) + pfst
         uvfactor        = self.geometries[index][4]
 
         vertexid        = Decompiler.getvertexid(data)
@@ -186,16 +191,57 @@ class MainApplication(tk.Frame):
         uvasset     = self.getasset(uvid)
         faceasset   = self.getasset(faceid)
 
-        vertices = Decompiler.rawblobtoverts(vertexasset.data)
-        normals  = Decompiler.rawblobtonormals(normalasset.data)
+        if pfst:
+            vertices = Decompiler.pfstrawblobtoverts(vertexasset.data)
+            normals  = Decompiler.pfstrawblobtonormals(vertexasset.data)
+        else:
+            vertices = Decompiler.rawblobtoverts(vertexasset.data)
+            normals  = Decompiler.rawblobtonormals(normalasset.data)
         uvs      = Decompiler.rawblobtouvs(uvasset.data, uvfactor)
-        faces    = Decompiler.rawblobtofaces(faceasset.data, animamount, referenceamount)
+        faces    = Decompiler.rawblobtofaces(faceasset.data, animamount, referenceamount, pfst)
 
         name = self.geometries[index][0].name + f" [{hex(int.from_bytes(self.geometries[index][0].assetid, 'big'))}]"
 
         Png.savepng(directory, texture, f"{name}")
         Wavefront.saveobj(open(directory+"/"+f"{name}.obj", "w+"), name, vertices, normals, uvs, faces)
         Mtl.savemtl(open(directory+"/"+f"{name}.mtl", "w+"), name)
+
+    def limitedreplace(self):
+        if self.archive == None: return
+        if self.geometries[self.selection][3] == False: return
+
+        tk.messagebox.showwarning("Warning", "The new model has to have the exact same amount of Vertices as the old one.")
+
+        directory = filedialog.askopenfilename(filetypes=(("Wavefront", "*.obj"),))
+
+        if directory=="":
+            return
+
+        # Check if everything is alright like this
+        vertices, uvs, normals, faces, mtllib, usemtl, valid = Wavefront.readobj(open(directory, "r"))
+
+        try:
+            for vert in vertices:
+                for dim in vert:
+                    int(dim*2**12).to_bytes(2, byteorder="big", signed=True)
+            
+            for normal in normals:
+                for dim in normal:
+                    int(dim*127).to_bytes(1, byteorder="big", signed=True)
+        except:
+            tk.messagebox.showerror("Error", "Vertices or Normals out of range.")
+            return
+
+        vertexid        = Decompiler.getvertexid(self.geometries[self.selection][0].data)
+        vertexasset = self.getasset(vertexid)
+        oldvertices = Decompiler.pfstrawblobtoverts(vertexasset.data)
+        
+        if len(oldvertices) != len(vertices):
+            tk.messagebox.showerror("Error", f"Unequal amount of Vertices!\nThe amount of Vertices isn't the same.\nExpected: {len(oldvertices)}\nReceived: {len(vertices)}")
+            return
+
+
+        self.replacemodel(self.selection, directory, True)
 
     def replace(self):
         if self.archive == None: return
@@ -206,10 +252,21 @@ class MainApplication(tk.Frame):
         if directory=="":
             return
 
+        self.replacemodel(self.selection, directory, False)
+
+    def replacemodel(self, index, directory, pfst):
         basedirectory = "/".join(directory.split("/")[:-1])
 
         vertices, uvs, normals, faces, mtllib, usemtl, valid = Wavefront.readobj(open(directory, "r"))
         materials = Mtl.readmtl(open(basedirectory+"/"+mtllib, "r"))
+
+        if pfst:  
+            newnormals = [[0, 0, 0] for vert in vertices]
+            for face in faces:
+                for idx in face:
+                    newnormals[idx[0]] = normals[idx[2]]
+                    idx[2] = idx[0]
+            normals = newnormals
 
         # Checks
         if not valid:
@@ -228,7 +285,7 @@ class MainApplication(tk.Frame):
             return
 
         faces = Triangulate.triangulate(faces)
-        
+
         # If texture path is absolute or not, then read it accordingly
         textures = [Png.clamp(Png.readpng(materials[mtl])) if materials[mtl][1] == ":" else Png.clamp(Png.readpng(basedirectory+"/"+materials[mtl])) for mtl in usemtl]
         #if materials[usemtl][1] == ":":
@@ -248,37 +305,43 @@ class MainApplication(tk.Frame):
         modelvertices, modelnormals, modeluvs, modelfaces, modeltexture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
         linefaces = [tri+[tri[0]] for tri in modelfaces]
 
-        self.geometries[self.selection][1].model = ModelViewer.urs.Mesh(vertices=modelvertices, normals=modelnormals, uvs=modeluvs, triangles=modelfaces)
-        self.geometries[self.selection][1].texture = ModelViewer.urs.Texture(modeltexture)
-        self.geometries[self.selection][1].texture.apply()
-        self.geometries[self.selection][2].model = ModelViewer.urs.Mesh(vertices=modelvertices, triangles=linefaces, mode="line")
+        self.geometries[index][1].model = ModelViewer.urs.Mesh(vertices=modelvertices, normals=modelnormals, uvs=modeluvs, triangles=modelfaces)
+        self.geometries[index][1].texture = ModelViewer.urs.Texture(modeltexture)
+        self.geometries[index][1].texture.apply()
+        self.geometries[index][2].model = ModelViewer.urs.Mesh(vertices=modelvertices, triangles=linefaces, mode="line")
 
         # Update Archive Model
-        data = self.geometries[self.selection][0].data
+        data = self.geometries[index][0].data
         vertexid        = Decompiler.getvertexid(data)
         normalid        = Decompiler.getnormalid(data)
         uvid            = Decompiler.getuvid(data)
         faceid          = Decompiler.getfaceid(data)
-        textureid       = self.geometries[self.selection][5]
+        textureid       = self.geometries[index][5]
         animamount      = Decompiler.getanimamount(data)
-        referenceamount = Decompiler.getreferenceamount(data)
-        uvfactor        = self.geometries[self.selection][4]
+        referenceamount = Decompiler.getreferenceamount(data) + pfst
+        uvfactor        = self.geometries[index][4]
 
-        vertexdata      = Compiler.vertextorawblob(vertices)
-        normaldata      = Compiler.normaltorawblob(normals)
+        if pfst:
+            rawblob = self.getasset(vertexid).data
+            vertexdata      = Compiler.pfstvertextorawblob(rawblob, vertices, normals)
+        else:
+            vertexdata      = Compiler.vertextorawblob(vertices)
+            normaldata      = Compiler.normaltorawblob(normals)
         uvdata          = Compiler.uvtorawblob(uvs, uvfactor)
-        facedata        = Compiler.facestorawblob(faces, animamount, referenceamount)
+        facedata        = Compiler.facestorawblob(faces, animamount, referenceamount, pfst)
         texturedata     = Compiler.texturetorawblob(texture, self.importintervar.get())
 
         self.setassetdata(vertexid, vertexdata)
-        self.setassetdata(normalid, normaldata)
+        if not pfst:
+            self.setassetdata(normalid, normaldata)
+        self.setassetdata(vertexid, vertexdata)
         self.setassetdata(uvid, uvdata)
         self.setassetdata(faceid, facedata)
         self.setassetdata(textureid, texturedata)
 
-        self.updateselection(self.selection, self.selection)
+        self.updateselection(index, index)
 
-        tk.messagebox.showinfo("Success", f"Successfully replaced {self.geometries[self.selection][0].name}")
+        tk.messagebox.showinfo("Success", f"Successfully replaced {self.geometries[index][0].name}")
 
     def setcoordinatesdata(self, coords, data):
         self.archive.mast.sections[0].layers[coords[0]].sublayer.tables[coords[1]].assets[coords[2]].data = data
@@ -300,11 +363,32 @@ class MainApplication(tk.Frame):
 
         if not self.geometries[newselection][3]:
             self.replacebutton["state"] = "disabled"
-            self.extractbutton["state"] = "disabled"
             self.replacebutton["text"] = "disabled"
+            self.replacebutton.configure(command=self.replace)
+            self.extractbutton["state"] = "disabled"
             self.extractbutton["text"] = "disabled"
+        
             ModelViewer.debugtext.text = "[Unsupported Model Type]"
             return
+
+
+        if self.geometries[newselection][6]: # If Verts are ParcelFast:
+            self.replacebutton["state"] = "normal"
+            self.replacebutton["text"] = "Edit Model"
+            self.replacebutton.configure(command=self.limitedreplace)
+            self.extractbutton["state"] = "normal"
+            self.extractbutton["text"] = "Extract Model"
+
+            ModelViewer.debugtext.text = "[Limited Support]"
+
+        else: # Other
+            self.replacebutton["state"] = "normal"
+            self.replacebutton["text"] = "Replace Model"
+            self.replacebutton.configure(command=self.replace)
+            self.extractbutton["state"] = "normal"
+            self.extractbutton["text"] = "Extract Model"
+
+            ModelViewer.debugtext.text = ""
 
         centerpoint = MidPoint.getavrg(self.geometries[newselection][1].model.vertices)
         
@@ -319,12 +403,7 @@ class MainApplication(tk.Frame):
 
         #print(type(self.geometries[self.selection][2].texture))
 
-        self.replacebutton["state"] = "normal"
-        self.extractbutton["state"] = "normal"
-        self.replacebutton["text"] = "Replace Model"
-        self.extractbutton["text"] = "Extract Model"
 
-        ModelViewer.debugtext.text = ""
 
     def onlistboxselect(self, e):
         widget = e.widget
@@ -366,10 +445,11 @@ class MainApplication(tk.Frame):
                 for asset in table.assets:
                     if asset.assettype == b"\x86\xEF\x29\x78" or asset.assettype == b"\x66\xEC\x03\x1B":
                         data = asset.data
-
-                        if Decompiler.checkskin(data):
-                            self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
-                            continue
+                        
+                        #if Decompiler.checkskin(data):
+                            #pfst = True
+                            #self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
+                            #continue
 
                         vertexid        = Decompiler.getvertexid(data)
                         normalid        = Decompiler.getnormalid(data)
@@ -381,19 +461,30 @@ class MainApplication(tk.Frame):
                         materialid      = Decompiler.getmaterialid(data)
                         materialasset   = self.getasset(materialid)
 
-                        if not Decompiler.getvalidmaterial(materialasset.data):
+                        if Decompiler.getvalidmaterial(materialasset.data):
+                            textureassetid  = Decompiler.gettextureassetid(materialasset.data)
+                            #self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
+                            #continue
+                        else:
+                            textureassetid  = Decompiler.getgeomtextureassetid(data)
+
+                        try:
+                            effectid        = Decompiler.geteffectassetid(materialasset.data)
+                            effectasset     = self.getasset(effectid)
+                            textureastasset = self.getasset(textureassetid)
+                            genericshaderid = Decompiler.getgenericshaderid(effectasset.data)
+                            textureid       = Decompiler.gettextureid(textureastasset.data)
+                            genshaderasset  = self.getasset(genericshaderid)
+                            uvfactor        = Decompiler.getuvfactor(genshaderasset.data)
+                        except:
                             self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
                             continue
-
-                        effectid        = Decompiler.geteffectassetid(materialasset.data)
-                        textureassetid  = Decompiler.gettextureassetid(materialasset.data)
-
-                        effectasset     = self.getasset(effectid)
-                        textureastasset = self.getasset(textureassetid)
-                        genericshaderid = Decompiler.getgenericshaderid(effectasset.data)
-                        textureid       = Decompiler.gettextureid(textureastasset.data)
-                        genshaderasset  = self.getasset(genericshaderid)
-                        uvfactor        = Decompiler.getuvfactor(genshaderasset.data)
+                        
+                        #new pfst check
+                        pfst = False
+                        vertexcoords = self.getassetcoordinate(vertexid)
+                        if self.archive.mast.sections[0].layers[vertexcoords[0]].type == "PFST":
+                            pfst = True
 
                         vertexasset = self.getasset(vertexid)
                         normalasset = self.getasset(normalid)
@@ -401,29 +492,39 @@ class MainApplication(tk.Frame):
                         faceasset   = self.getasset(faceid)
                         textureasset= self.getasset(textureid)
 
-                        vertices = Decompiler.rawblobtoverts(vertexasset.data)
-                        normals  = Decompiler.rawblobtonormals(normalasset.data)
+                        if pfst:
+                            vertices = Decompiler.pfstrawblobtoverts(vertexasset.data)
+                            normals  = Decompiler.pfstrawblobtonormals(vertexasset.data)
+                            referenceamount += 1
+                        else:
+                            vertices = Decompiler.rawblobtoverts(vertexasset.data)
+                            normals  = Decompiler.rawblobtonormals(normalasset.data)
                         uvs      = Decompiler.rawblobtouvs(uvasset.data, uvfactor)
-                        faces    = Decompiler.rawblobtofaces(faceasset.data, animamount, referenceamount)
+                        faces    = Decompiler.rawblobtofaces(faceasset.data, animamount, referenceamount, pfst)
                         texture  = Decompiler.rawblobtotexture(textureasset.data)
 
                         # Implement Normals here
-                        try: # Try and except cause I can't anymore
+                        #print(vertexasset.name, len(vertices))
+                        
+                        #if vertexasset.name == "Spongebob_Rig_Geo":
+                        #    print(vertices)
+                        #    exit()
+                        try:
                             vertices, normals, uvs, faces, texture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
                             linefaces = [tri+[tri[0]] for tri in faces]
-
-                        except Exception as E:
-                            #print(E)
-                            #exit()
+                        except:
                             self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
                             continue
+                        #self.geometries.append([asset, ModelViewer.urs.Entity(model="cube", visible=False), ModelViewer.urs.Entity(model="cube", visible=False), False]) # -> Assetclass, Entity, IsEditable
+                        #continue
 
                         self.geometries.append([asset,
                             ModelViewer.urs.Entity(model=ModelViewer.urs.Mesh(vertices=vertices, normals=normals, uvs=uvs, triangles=faces), texture=ModelViewer.urs.Texture(texture), double_sided = True, visible=False),
                             ModelViewer.urs.Entity(model=ModelViewer.urs.Mesh(vertices=vertices, triangles=linefaces, mode="line"), visible=False),
                             True,
                             uvfactor,
-                            textureid])
+                            textureid,
+                            pfst])
         
         self.updateselection(0, 0)
         self.selection = 0

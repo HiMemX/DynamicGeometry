@@ -3,6 +3,7 @@ import ModelDecompile.Assets.RawBlobs.UVRawBlob as UV
 import ModelDecompile.Assets.RawBlobs.FaceRawBlob as Face
 import ModelDecompile.Assets.RawBlobs.TextureRawBlob as Texture
 import ModelDecompile.Assets.RawBlobs.NormalRawBlob as Normal
+import ModelDecompile.Assets.RawBlobs.PfstVertexRawBlob as PfstVertex
 
 import ModelDecompile.Assets.StaticGeometry as StaticGeometry
 import ModelDecompile.Assets.Material as Material
@@ -38,6 +39,7 @@ def gettextureassetid(data):
 
     return ids[1]
 
+
 def getmaterialid(data):
     return StaticGeometry.getids(data)[0]
 
@@ -53,6 +55,9 @@ def getfaceid(data):
 def getnormalid(data):
     return StaticGeometry.getids(data)[2]
 
+def getgeomtextureassetid(data):
+    return StaticGeometry.gettextureids(data)
+
 
 def rawblobtoverts(data):
     return Vertex.toverts(data)
@@ -60,14 +65,20 @@ def rawblobtoverts(data):
 def rawblobtouvs(data, uvfactor):
     return UV.touvs(data, uvfactor)
     
-def rawblobtofaces(data, animamount, referenceamount):
-    return Face.tofaces(data, animamount, referenceamount)
+def rawblobtofaces(data, animamount, referenceamount, pfst):
+    return Face.tofaces(data, animamount, referenceamount, pfst)
 
 def rawblobtotexture(data):
     return Texture.totexture(data)
 
 def rawblobtonormals(data):
     return Normal.tonormals(data)
+
+def pfstrawblobtoverts(data):
+    return PfstVertex.toverts(data)
+
+def pfstrawblobtonormals(data):
+    return PfstVertex.tonormals(data)
 
 
 def checkskin(data):
