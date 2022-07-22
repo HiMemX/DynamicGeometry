@@ -27,8 +27,8 @@ def torawblob(data, verts, normals):
         newbuffer += int(verts[v][2]*2**12).to_bytes(2, byteorder="big", signed=True)
         newbuffer += int(verts[v+1][2]*2**12).to_bytes(2, byteorder="big", signed=True)
 
-        newbuffer += int(normals[v][0]*127).to_bytes(1, byteorder="big", signed=True)
-        newbuffer += int(normals[v+1][0]*127).to_bytes(1, byteorder="big", signed=True)
+        newbuffer += int(normals[v][0]*-127).to_bytes(1, byteorder="big", signed=True)
+        newbuffer += int(normals[v+1][0]*-127).to_bytes(1, byteorder="big", signed=True)
         newbuffer += int(normals[v][1]*127).to_bytes(1, byteorder="big", signed=True)
         newbuffer += int(normals[v+1][1]*127).to_bytes(1, byteorder="big", signed=True)
         newbuffer += int(normals[v][2]*127).to_bytes(1, byteorder="big", signed=True)
