@@ -269,9 +269,13 @@ class MainApplication(tk.Frame):
             normals = newnormals
 
         # Checks
-        if not valid:
+        if (not valid) and (len(materials) > 1):
             tk.messagebox.showwarning("Warning", "Detected Out-Of-Bounds UVs!")
-
+        
+        if len(materials) < 1:
+            tk.messagebox.showerror("Error", "Material Count Incompatibility!\nMake sure you have at least one material in your Material Library.")
+            return
+        
         if len(vertices) > 65536:
             tk.messagebox.showerror("Error", "Too many vertices!\nMaximum supported amount is 65536.")
             return
@@ -294,12 +298,31 @@ class MainApplication(tk.Frame):
         #    texture = Png.readpng(basedirectory+"/"+materials[usemtl])
 
         #texture = Png.clamp(texture)
-        atlassize = Atlas.getatlassize(len(textures))
-        biggestsizex, biggestsizey = ImageTools.getbiggestsize(textures)
-        textures = [ImageTools.resize(texture, biggestsizex, biggestsizey) for texture in textures]
-        uvs = Atlas.fixuvs(uvs, atlassize)
-        uvs = MeshTools.clampuvs(uvs)
-        texture = [Atlas.stitch(textures, atlassize)]
+        
+        if len(textures) > 1:
+            # _________________ ATLAS
+            atlassize = Atlas.getatlassize(len(textures))
+            
+            # Resize textures to be the same
+            biggestsizex, biggestsizey = ImageTools.getbiggestsize(textures)
+            textures = [ImageTools.resize(texture, biggestsizex, biggestsizey) for texture in textures]
+            
+            # Adjust UVs
+            uvs = Atlas.fixuvs(uvs, atlassize)
+            # Pull them inbounds
+            uvs = MeshTools.clampuvs(uvs)
+            
+            # Stitch atlas together
+            texture = [Atlas.stitch(textures, atlassize)]
+            # _________________
+            
+        elif len(textures) == 1:
+            texture = [textures[0]]
+            uvs = uvs[0]
+            
+        else:
+            tk.messagebox.showerror("Error", "Something went wrong!")
+            return
 
         # Update Ursina Model
         modelvertices, modelnormals, modeluvs, modelfaces, modeltexture = UrsinaMesher.mesh(vertices, normals, uvs, faces, texture)
